@@ -67,7 +67,7 @@ def create_thread(bucket_id):
 
     return thread_id
 
-# 채팅 전송
+# 채팅 전송 비동기
 async def send_chat(thread_id, question):
     url = base_url + f"/v1/threads/{thread_id}/chats"
     payload = {
@@ -102,6 +102,39 @@ async def send_chat(thread_id, question):
     r_list.append(text)
     return text
 
+def send_chat_sync(thread_id, question):
+    url = base_url + f"/v1/threads/{thread_id}/chats"
+    payload = {
+        "question": question,
+        "isStreaming": True
+    }
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "x-storm-token": api_key
+    }
+    response = requests.post(url, json=payload, headers=headers, stream=True)
+    text = ""
+
+    for chunk in response.iter_lines(decode_unicode=True):
+        if chunk:
+            try:
+                data = json.loads(chunk)
+                content = data.get("content")
+                is_final_event = data.get("is_final_event")
+
+                if content:
+                    #print(content, end="", flush=True)
+                    text = text + content
+
+                if is_final_event:
+                    break
+            except json.JSONDecodeError as e:
+                print(f"Error decoding JSON: {e}")
+                continue
+
+    return text
+
 menu = ['직접 입력', '엑셀 업로드']
 choice = st.sidebar.selectbox('메뉴', menu)
 #menus = ['직접 입력', '엑셀 업로드']
@@ -118,7 +151,7 @@ if choice == menu[0]:
         thread_id = create_thread(bucket_id)
 
         st.session_state.past.append(user_input)
-        st.session_state.generated.append(send_chat(thread_id, user_input))
+        st.session_state.generated.append(send_chat_sync(thread_id, user_input))
 
         #st.session_state.past.append(user_input2)
         #st.session_state.generated.append(user_input2+" Answer")
