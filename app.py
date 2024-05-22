@@ -13,6 +13,7 @@ base_url = "https://live-stargate.sionic.im/api"
 api_key = st.secrets["api_key"]
 
 
+
 #st.header("Chatbot LMM 🤖")
 st.header("Chatbot LMM PoC")
 
@@ -42,13 +43,14 @@ def postRequest(payload):
 	response = requests.post(API_URL, headers=headers, json=payload)
 	return response.json()
 
-async def process(thread_list, question_list):
+def process(thread_list, question_list):
     tasks = []
-    for i in range(0, len(thread_list)):
-        tasks.append(asyncio.create_task(send_chat(thread_list[i], question_list[i])))
+    #for i in range(0, len(thread_list)):
+        #tasks.append(asyncio.create_task(send_chat(thread_list[i], question_list[i])))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-        executor.map(tasks)
+        for t, q in zip(thread_list, question_list):
+            executor.submit(send_chat, t, q)
     #await asyncio.wait(tasks)
 
 # 채팅 쓰레드 생성
@@ -72,7 +74,7 @@ def create_thread(bucket_id):
 
 
 # 채팅 전송 비동기
-async def send_chat(thread_id, question):
+def send_chat(thread_id, question):
     print("SEND")
     print(thread_id)
     url = base_url + f"/v1/threads/{thread_id}/chats"
@@ -199,11 +201,10 @@ elif choice == menu[1]:
                         thread_id = create_thread(bucket_id)
                         task_thread_list.append(thread_id)
                         task_question_list.append(line[0])
-                        print(thread_id)
                         
                 cnt = cnt + 1
 
-            asyncio.run(process(task_thread_list, task_question_list))
+            process(task_thread_list, task_question_list)
                 
             rf.close()
             os.remove('csv/'+filename)
