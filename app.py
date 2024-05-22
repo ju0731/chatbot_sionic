@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import requests
+import concurrent.futures
 import json
 import pandas as pd
 import csv
@@ -46,7 +47,9 @@ async def process(thread_list, question_list):
     for i in range(0, len(thread_list)):
         tasks.append(asyncio.create_task(send_chat(thread_list[i], question_list[i])))
 
-    await asyncio.wait(tasks)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        executor.map(tasks)
+    #await asyncio.wait(tasks)
 
 # 채팅 쓰레드 생성
 def create_thread(bucket_id):
@@ -67,8 +70,11 @@ def create_thread(bucket_id):
 
     return thread_id
 
+
 # 채팅 전송 비동기
 async def send_chat(thread_id, question):
+    print("SEND")
+    print(thread_id)
     url = base_url + f"/v1/threads/{thread_id}/chats"
     payload = {
         "question": question,
@@ -193,6 +199,7 @@ elif choice == menu[1]:
                         thread_id = create_thread(bucket_id)
                         task_thread_list.append(thread_id)
                         task_question_list.append(line[0])
+                        print(thread_id)
                         
                 cnt = cnt + 1
 
