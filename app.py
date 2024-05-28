@@ -14,6 +14,7 @@ api_key = st.secrets["api_key"]
 
 
 
+
 #st.header("Chatbot LMM 🤖")
 st.header("Chatbot LMM PoC")
 
@@ -65,19 +66,17 @@ def create_thread(bucket_id):
     }
 
     response = requests.post(url, json=payload, headers=headers)
-    print(response.text)
+    #print(response.text)
 
     thread_id = response.json().get("data").get("threadId")
-    print(payload)
-    print(f"threadId : {thread_id}")
+    #print(payload)
+    #print(f"threadId : {thread_id}")
 
     return thread_id
 
 
 # 채팅 전송 비동기
 def send_chat(thread_id, question):
-    #print("SEND")
-    #print(thread_id)
     url = base_url + f"/v1/threads/{thread_id}/chats"
     payload = {
         "question": question,
@@ -103,14 +102,16 @@ def send_chat(thread_id, question):
 
                 index = 0
                 if content:
-                    #print(content, end="", flush=True)
                     text = text + content
                 if contexts:
                     for context in contexts:
                         index = index + 1
-                        textc = textc + "[" + str(index) + "] "
-                        textc = textc + context.get("filename") + " ("
-                        textc = textc + context.get("page_name") + "Page) \n"
+                        search_string = "[#"+str(index)+"]"
+                        if text.find(search_string) != -1:
+                            #print(search_string)
+                            textc = textc + "[" + str(index) + "] "
+                            textc = textc + context.get("filename") + " ("
+                            textc = textc + context.get("page_name") + "Page) \n"
 
                 if is_final_event:
                     break
@@ -144,7 +145,6 @@ def send_chat_sync(thread_id, question):
                 is_final_event = data.get("is_final_event")
 
                 if content:
-                    #print(content, end="", flush=True)
                     text = text + content
 
                 if is_final_event:
@@ -206,8 +206,6 @@ elif choice == menu[1]:
 
             for line in reader:
                 if cnt > 0:
-                    print(line[0])
-
                     if line:
                         bucket_id = "7194191884929994753"
                         thread_id = create_thread(bucket_id)
