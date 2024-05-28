@@ -19,6 +19,7 @@ st.header("Chatbot LMM PoC")
 
 q_list = []
 r_list = []
+c_list = []
 
 if 'generated' not in st.session_state:
     st.session_state['generated'] = []
@@ -75,8 +76,8 @@ def create_thread(bucket_id):
 
 # 채팅 전송 비동기
 def send_chat(thread_id, question):
-    print("SEND")
-    print(thread_id)
+    #print("SEND")
+    #print(thread_id)
     url = base_url + f"/v1/threads/{thread_id}/chats"
     payload = {
         "question": question,
@@ -89,17 +90,27 @@ def send_chat(thread_id, question):
     }
     response = requests.post(url, json=payload, headers=headers, stream=True)
     text = ""
+    textc = ""
 
     for chunk in response.iter_lines(decode_unicode=True):
         if chunk:
             try:
                 data = json.loads(chunk)
+
                 content = data.get("content")
                 is_final_event = data.get("is_final_event")
+                contexts = data.get("contexts")
 
+                index = 0
                 if content:
                     #print(content, end="", flush=True)
                     text = text + content
+                if contexts:
+                    for context in contexts:
+                        index = index + 1
+                        textc = textc + "[" + str(index) + "] "
+                        textc = textc + context.get("filename") + " ("
+                        textc = textc + context.get("page_name") + "Page) \n"
 
                 if is_final_event:
                     break
@@ -108,6 +119,7 @@ def send_chat(thread_id, question):
                 continue
     q_list.append(question)
     r_list.append(text)
+    c_list.append(textc)
     return text
 
 def send_chat_sync(thread_id, question):
@@ -212,9 +224,10 @@ elif choice == menu[1]:
             df = pd.DataFrame()
             df['Question'] = q_list
             df['Answer'] = r_list
+            df['context'] = c_list
             st.dataframe(df)
             r_list = []
-
+            c_list = []
 
             def convert_df(df):
                 return df.to_csv(index=False).encode('utf-8')
